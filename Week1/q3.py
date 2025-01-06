@@ -3,8 +3,8 @@
 
 import sys
 
-X = [0,0,0,0]
-Y = [4,3,2,1]
+X = [(0,0),(0,0),(0,0),(0,0)]
+Y = [(0,4),(0,3),(0,2),(0,1)]
 EDistances = []
 
 if len(X) != len(Y):
@@ -12,7 +12,7 @@ if len(X) != len(Y):
 
 # Caluculate Euclidian Distances
 for i in range(len(X)):
-    EDistances.append((abs((X[i]**2) - (Y[i]**2)))**0.5)
+    EDistances.append((abs(((X[i][0]-Y[i][0])**2) + ((X[i][1]-Y[i][1])**2)))**0.5)
 
 # Bubble Sort
 for j in range(len(EDistances)-1):
