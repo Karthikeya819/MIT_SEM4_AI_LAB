@@ -1,0 +1,12 @@
+Feering,Maldon,11
+Clacton,Maldon,40
+Maldon,Tiptree,8
+Tiptree,Feering,3
+Tiptree,Clacton,29
+Harwich,Tiptree,31
+Clacton,Harwich,17
+Feering,Blaxhall,46
+Harwich,Blaxhall,40
+Blaxhall,Dunwich,15
+Dunwich,Blaxhall,17
+Harwich,Dunwich,53
