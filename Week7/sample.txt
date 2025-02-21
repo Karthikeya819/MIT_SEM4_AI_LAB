@@ -1,0 +1,12 @@
+Enter Nodes:A,B,C,D,E,G
+Enter Heuristic Values: 11,6,99,1,7,0
+Enter <edge_start>,<edge_end>,<weight>  Enter -1,-1,-1 to exit
+A,B,2
+A,E,3
+B,C,1
+B,G,9
+D,E,6
+D,G,1
+-1,-1,-1
+Enter start:A
+Enter Goals:G
