@@ -32,22 +32,20 @@ def AStar(graph,start,goals,Heuristic):
     VisitedNode,Queue,AdjacencyList = [],[],graph.AdjacencyList()
     Queue.append([[start],Heuristic[start],0])
     while len(Queue) != 0:
-        vertex,min_value,min_path,i_min = Queue[0][0],Queue[0][1],Queue[0][2],0
-        for i in range(len(Queue)):
-            if Queue[i][1] < min_value:
-                min_value = Queue[i][1]
-                vertex = Queue[i][0]
-                min_path = Queue[0][2]
+        vertex_min,i_min = Queue[0],0
+        for i,vert in enumerate(Queue):
+            if vert[1] <= vertex_min[1]:
+                vertex_min = vert
                 i_min = i
         Queue.pop(i_min)
-        if vertex[-1] in goals:
-            VisitedNode.append(vertex[-1])
-            return vertex,min_path
-        if vertex not in VisitedNode:
-            for neigh in AdjacencyList[vertex[-1]]:
-                pah = vertex.copy()
+        if vertex_min[0][-1] in goals:
+            VisitedNode.append(vertex_min[0][-1])
+            return vertex_min[0],vertex_min[2]
+        if vertex_min[0] not in VisitedNode:
+            for neigh in AdjacencyList[vertex_min[0][-1]]:
+                pah = vertex_min[0].copy()
                 pah.append(neigh[0])
-                Queue.append([pah,Heuristic[neigh[0]]+min_path+neigh[1],neigh[1]+min_path])
+                Queue.append([pah,Heuristic[neigh[0]]+vertex_min[2]+neigh[1],neigh[1]+vertex_min[2]])
 
 
 Nodes = input("Enter Nodes:").split(",")
@@ -66,8 +64,9 @@ start = mapping[input("Enter start:")]
 goals = input("Enter Goals:").split(",")
 for i in range(len(goals)):
     goals[i] = mapping[goals[i]]
+print(graph.AdjacencyList())
 path,cost = AStar(graph,start,goals,Heuristic)
 for i in range(len(path)):
     path[i] = Nodes[path[i]]
-print("The optimal path using BFS is ",path)
+print("The optimal path using Astar is ",path)
 print("The cost of path is "+str(cost))
