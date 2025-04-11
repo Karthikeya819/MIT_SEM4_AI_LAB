@@ -17,14 +17,12 @@ def reset_directory(path):
                 os.remove(f)
 
 def compute_gradient(depth_grid):
-    """Optimized gradient computation"""
     grad_y, grad_x = np.gradient(depth_grid)
-    return np.hypot(grad_x, grad_y)  # Faster than sqrt(x²+y²)
+    return np.hypot(grad_x, grad_y)
 
 def compute_potential_field(depth_grid, goal, obstacle_weight=2.0, goal_weight=2.0, 
                           sigma_obstacle=1, sigma_goal=3, slope_weight=2.0,
                           max_slope_threshold=0.5):
-    """Enhanced potential field computation prioritizing path quality"""
     depth_min, depth_max = depth_grid.min(), depth_grid.max()
     depth_normalized = (depth_grid - depth_min) / (depth_max - depth_min + 1e-6)
     
@@ -57,26 +55,28 @@ def is_valid_move(depth_grid, pos):
     rows, cols = depth_grid.shape
     return (0 <= pos[0] < rows and 0 <= pos[1] < cols)
 
-def heuristic(node, goal):
-    """Modified heuristic with reduced influence"""
-    dx = node[0] - goal[0]
-    dy = node[1] - goal[1]
-    # Using Manhattan distance component to encourage more gradual paths
-    return 0.5 * (np.hypot(dx, dy) + abs(dx) + abs(dy))
+def heuristic(depth_grid,node, goal):
+    dx, dy = node[0] - goal[0], node[1] - goal[1]
+    depth_diff = abs(depth_grid[node] - depth_grid[goal])
+    return np.hypot(dx, dy) + 5.0 * depth_diff
 
 def a_star_with_potential(depth_grid, start, goal, max_iterations=50000000):
-    """Modified A* implementation prioritizing path quality"""
     if not (is_valid_move(depth_grid, start) and is_valid_move(depth_grid, goal)):
         return None
     
     print(f"\nStarting A* search from {start} to {goal}")
     print(f"Depth grid shape: {depth_grid.shape}")
     print(f"Depth grid range: {depth_grid.min():.3f} to {depth_grid.max():.3f}")
+
+    # cv2.imshow("depth_grid",depth_grid)
+    # cv2.waitKey(0)
     
     potential_field = compute_potential_field(depth_grid, goal)
-    cv2.imwrite("E:/MIT_SEM4_AI_LAB/MiniProject/Samples/1/depth_pot_field.webp", potential_field)
+    # cv2.imshow("potential field",potential_field)
+    # cv2.waitKey(0)
     slope_field = compute_gradient(depth_grid)
-    cv2.imwrite("E:/MIT_SEM4_AI_LAB/MiniProject/Samples/1/depth_slope_field.webp", slope_field)
+    # cv2.imshow("slope_field",slope_field)
+    # cv2.waitKey(0)
 
     
     rows, cols = depth_grid.shape
@@ -84,8 +84,7 @@ def a_star_with_potential(depth_grid, start, goal, max_iterations=50000000):
     open_set.put((0, start))
     came_from = {start: None}
     cost_so_far = {start: 0}
-    
-    # Pre-compute movement patterns with diagonal cost adjustment
+
     movements = [(0, 1), (1, 0), (0, -1), (-1, 0), 
                 (1, 1), (1, -1), (-1, 1), (-1, -1)]
     movement_costs = [np.sqrt(dx*dx + dy*dy) * (1.2 if dx and dy else 1.0) 
@@ -119,21 +118,27 @@ def a_star_with_potential(depth_grid, start, goal, max_iterations=50000000):
             slope_val = slope_field[neighbor]
             depth_val = depth_grid[neighbor]
             potential_val = potential_field[neighbor]
+
+            if slope_val > 0.7 or potential_val > 0.9:  # Skip invalid nodes early
+                continue
+
+            depth_change_penalty = abs(depth_val - depth_grid[current])
             
             # Increased weights for terrain factors
             terrain_cost = (
-                6.0 * slope_val +  # slope penalty
-                15.0 * (1.0 - depth_val) +  # depth penalty
-                2.0 * max(0, potential_val)  # potential field penalty
+                30.0 * slope_val +  # slope penalty 30
+                0.01 * (1.0 - depth_val) +  # depth penalty
+                0.01 * max(0, potential_val) +  # potential field penalty
+                15 * depth_change_penalty   # New penalty for depth variation 15
             )
             
             total_cost = base_cost * (1.0 + terrain_cost)
-            
-            new_cost = cost_so_far[current] + total_cost
+            depth_diff = abs(depth_grid[new_row, new_col] - depth_grid[current_row, current_col])
+            new_cost = cost_so_far[current] + base_cost * (1.0 + terrain_cost + 10.0 * depth_diff)
             
             if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
                 cost_so_far[neighbor] = new_cost
-                priority = new_cost + 0.5 * heuristic(neighbor, goal)
+                priority = new_cost + 0.5 * heuristic(depth_grid, neighbor, goal)
                 open_set.put((priority, neighbor))
                 came_from[neighbor] = current
     
@@ -223,13 +228,22 @@ def visualize_path(image, proc_depth, path, f_name):
     print(f"Saved path visualization to {f_name}")
 
 def main():
-
-    rgb_path = "E:/MIT_SEM4_AI_LAB/MiniProject/Samples/1/image_rgb.jpg"
-    depth_path = "E:/MIT_SEM4_AI_LAB/MiniProject/Samples/1/image_depth.webp"
-    proc_depth_path = "E:/MIT_SEM4_AI_LAB/MiniProject/Samples/1/image_depth.webp"
-    output_path = "E:/MIT_SEM4_AI_LAB/MiniProject/Samples/1/image_rgb_proc.webp"
-    coords = [[0,562],[999,0]]
-    process_image(rgb_path, depth_path, proc_depth_path, coords, output_path)
+    file_no = 7
+    rgb_path = f"E:/MIT_SEM4_AI_LAB/MiniProject/Samples/{file_no}/image_rgb.jpg"
+    depth_path = f"E:/MIT_SEM4_AI_LAB/MiniProject/Samples/{file_no}/image_depth.webp"
+    proc_depth_path = f"E:/MIT_SEM4_AI_LAB/MiniProject/Samples/{file_no}/image_depth.webp"
+    output_path = f"E:/MIT_SEM4_AI_LAB/MiniProject/Samples/{file_no}/image_rgb_proc.webp"
+    points = []
+    def click_event(event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            points.append((x, y))
+            if len(points) == 2:
+                cv2.destroyAllWindows()
+    img = cv2.imread(rgb_path)
+    cv2.imshow("Select Start, Goal", img)
+    cv2.setMouseCallback("Select Start, Goal", click_event)
+    cv2.waitKey(0)
+    process_image(rgb_path, depth_path, proc_depth_path, points, output_path)
 
 if __name__ == "__main__":
     main()
